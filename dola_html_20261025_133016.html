@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brise Café — Order Online</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0A3D62',
+            accent: '#3C6382',
+            cream: '#F8F4EF',
+            gold: '#D4A574',
+          },
+          fontFamily: {
+            display: ['Playfair Display', 'serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #F8F4EF; }
+    h1, h2, h3 { font-family: 'Playfair Display', serif; }
+    .tab-active { border-bottom: 3px solid #0A3D62; color: #0A3D62; font-weight: 600; }
+    .menu-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(10,61,98,0.1); transition: all 0.2s ease; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Hidden textarea for reliable copying -->
+  <textarea id="copyBuffer" class="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none" aria-hidden="true"></textarea>
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-primary">Brise Café</h1>
+        <p class="text-sm text-gray-500">📍 Sabang, Baler, Aurora · Tue–Sun 1PM–9PM</p>
+      </div>
+      <button id="cartToggle" class="relative bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-full transition">
+        🛒 Cart
+        <span id="cartCount" class="absolute -top-2 -right-2 bg-gold text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-r from-primary/5 to-accent/5 py-8">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <h2 class="text-3xl font-bold text-primary mb-2">Bringing Elevated Coffees in Baler</h2>
+      <p class="text-gray-600 mb-4">Build your order → copy details → paste in Messenger</p>
+      <a href="https://www.facebook.com/share/1FLgJVvTcc/" target="_blank" class="inline-block bg-primary text-white px-5 py-2 rounded-lg hover:bg-accent transition">
+        📘 Brise Café — Facebook Page
+      </a>
+    </div>
+  </section>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Order Type Selection -->
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold text-center mb-4">How would you like your order?</h2>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <button data-type="dinein" class="type-btn border-2 border-primary/20 hover:border-primary rounded-xl p-4 text-center transition">
+          <span class="text-2xl">🍽️</span>
+          <div class="font-semibold mt-1">Dine-In</div>
+        </button>
+        <button data-type="takeout" class="type-btn border-2 border-primary/20 hover:border-primary rounded-xl p-4 text-center transition">
+          <span class="text-2xl">🥡</span>
+          <div class="font-semibold mt-1">Take-Out</div>
+        </button>
+        <button data-type="delivery" class="type-btn border-2 border-primary/20 hover:border-primary rounded-xl p-4 text-center transition">
+          <span class="text-2xl">🚚</span>
+          <div class="font-semibold mt-1">Delivery</div>
+        </button>
+      </div>
+
+      <!-- Order Info Form -->
+      <div id="orderForm" class="bg-white rounded-xl shadow p-5 mb-6 hidden">
+        <h3 class="font-semibold text-lg mb-3" id="formTitle">Order Details</h3>
+        <div id="formFields"></div>
+        <p id="formError" class="text-red-500 text-sm mt-2 hidden"></p>
+      </div>
+    </section>
+
+    <!-- Menu Tabs -->
+    <section>
+      <div class="flex flex-wrap gap-4 border-b mb-6">
+        <button data-tab="coffee" class="tab-btn px-4 py-2 tab-active">☕ Coffee</button>
+        <button data-tab="noncoffee" class="tab-btn px-4 py-2 text-gray-500">🍵 Non-Coffee</button>
+        <button data-tab="seasonal" class="tab-btn px-4 py-2 text-gray-500">✨ Seasonal</button>
+        <button data-tab="milktea" class="tab-btn px-4 py-2 text-gray-500">🧋 Milk Tea</button>
+        <button data-tab="milkshake" class="tab-btn px-4 py-2 text-gray-500">🥤 Milkshakes</button>
+        <button data-tab="food" class="tab-btn px-4 py-2 text-gray-500">🍔 Food</button>
+        <button data-tab="dessert" class="tab-btn px-4 py-2 text-gray-500">🍪 Desserts</button>
+        <button data-tab="addons" class="tab-btn px-4 py-2 text-gray-500">⚙️ Add-ons</button>
+      </div>
+
+      <!-- Menu Content -->
+      <div id="menuContent" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+  </main>
+
+  <!-- Cart Sidebar/Modal -->
+  <div id="cartOverlay" class="fixed inset-0 bg-black/50 z-50 hidden">
+    <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto">
+      <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white">
+        <h3 class="text-xl font-bold">Your Cart</h3>
+        <button id="closeCart" class="text-gray-500 text-2xl hover:text-black">&times;</button>
+      </div>
+      <div id="cartItems" class="p-5">
+        <p class="text-gray-400 text-center">Your cart is empty</p>
+      </div>
+      <div class="p-5 border-t sticky bottom-0 bg-white">
+        <div class="flex justify-between text-lg font-semibold mb-3">
+          <span>Total</span>
+          <span id="cartTotal">₱0.00</span>
+        </div>
+        <button id="checkoutBtn" class="w-full bg-primary hover:bg-accent text-white py-3 rounded-lg font-semibold transition disabled:opacity-50" disabled>
+          ✅ Copy & Go to Facebook
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success / Redirect Modal -->
+  <div id="successOverlay" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 text-center">
+      <div class="text-5xl mb-4" id="copyIcon">📋</div>
+      <h3 class="text-xl font-bold text-primary mb-2" id="copyTitle">Copying Order...</h3>
+      <p class="text-gray-600 mb-4" id="copyMessage">Your order details are being prepared.</p>
+      
+      <!-- Order Preview -->
+      <div id="orderPreview" class="bg-gray-50 rounded-lg p-3 mb-4 text-left text-sm whitespace-pre-wrap text-gray-700 max-h-48 overflow-y-auto hidden"></div>
+      
+      <!-- Copy Buttons -->
+      <button id="manualCopyBtn" class="block w-full bg-gold text-white py-3 rounded-lg font-semibold hover:bg-amber-600 transition mb-2 hidden">
+        📋 Click to Copy Order
+      </button>
+      
+      <a id="fbLink" href="https://www.facebook.com/share/1FLgJVvTcc/" target="_blank" 
+         class="block w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-accent transition mb-2">
+        📘 Open Brise Café on Facebook
+      </a>
+      
+      <p class="text-xs text-gray-500 mb-3">Then Message → Paste → Send</p>
+      
+      <button id="closeSuccess" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t mt-12 py-6 text-center text-gray-500 text-sm">
+    <p>📍 Sabang, Baler, Aurora · 🕐 Tuesday–Sunday 1PM–9PM · Monday Closed</p>
+    <p class="mt-1">Send your order via Facebook Messenger</p>
+  </footer>
+
+  <script>
+    // === MENU DATA ===
+    const menu = {
+      coffee: [
+        { name: 'Americano', desc: 'Espresso with cold water', sizes: [{label:'12oz',price:90},{label:'16oz',price:100}] },
+        { name: 'Mango Americano', desc: 'Espresso with mango', sizes: [{label:'12oz',price:110},{label:'16oz',price:120}] },
+        { name: 'Latte', desc: 'Espresso with milk', sizes: [{label:'12oz',price:105},{label:'16oz',price:115}] },
+        { name: 'Snow Blossom White Chocolate Latte ★', desc: 'Espresso with white chocolate', sizes: [{label:'12oz',price:125},{label:'16oz',price:145}] },
+        { name: 'Midnight Latte', desc: 'Espresso with chocolate', sizes: [{label:'12oz',price:125},{label:'16oz',price:145}] },
+        { name: 'Vietnamese Latte', desc: 'Strong espresso with sweetened milk', sizes: [{label:'12oz',price:105},{label:'16oz',price:125}] },
+        { name: 'Spanish Latte', desc: 'Espresso with sweetened milk', sizes: [{label:'12oz',price:110},{label:'16oz',price:120}] },
+      ],
+      noncoffee: [
+        { name: 'Matcha Latte ★', desc: 'Matcha with oat milk', sizes: [{label:'12oz',price:135},{label:'16oz',price:145}] },
+        { name: 'Strawberry Milk ★', desc: 'Strawberry with milk', sizes: [{label:'12oz',price:125},{label:'16oz',price:140}] },
+        { name: 'Strawberry Matcha', desc: 'Matcha with strawberry', sizes: [{label:'12oz',price:145},{label:'16oz',price:160}] },
+        { name: 'Banana Matcha', desc: 'Matcha with banana', sizes: [{label:'12oz',price:130},{label:'16oz',price:150}] },
+        { name: 'Mango Matcha', desc: 'Matcha with mango', sizes: [{label:'12oz',price:130},{label:'16oz',price:150}] },
+        { name: 'OvaBliss', desc: '', sizes: [{label:'16oz',price:130}] },
+      ],
+      seasonal: [
+        { name: 'Crème Brûlée Latte', desc: 'Espresso with caramelized vanilla', sizes: [{label:'12oz',price:135},{label:'16oz',price:155}] },
+        { name: 'Frosted Mint Mocha', desc: 'Chocolate espresso with cool mint', sizes: [{label:'12oz',price:135},{label:'16oz',price:160}] },
+        { name: 'Campfire S\'mores Latte ★', desc: 'Espresso with cinnamon', sizes: [{label:'12oz',price:145},{label:'16oz',price:160}] },
+        { name: 'Salted Cloud Toffee Latte ★', desc: 'Espresso with chocolate salted cream', sizes: [{label:'12oz',price:145},{label:'16oz',price:160}] },
+        { name: 'Biscoffee', desc: 'Espresso with Biscoff', sizes: [{label:'12oz',price:160},{label:'16oz',price:170}] },
+        { name: 'XOXO Latte', desc: 'Espresso with strawberry & white chocolate', sizes: [{label:'12oz',price:125},{label:'16oz',price:135}] },
+        { name: 'XOXO Dalgona', desc: 'Strawberry topped with Dalgona', sizes: [{label:'12oz',price:115},{label:'16oz',price:125}] },
+        { name: 'Caramel Macchiato ★', desc: 'Milk, espresso, caramel', sizes: [{label:'12oz',price:125},{label:'16oz',price:145}] },
+      ],
+      milktea: [
+        { name: 'Classic Milk Tea', desc: 'with black tapioca pearl', price: 75 },
+        { name: 'Wintermelon Milk Tea', desc: 'with black tapioca pearl', price: 80 },
+        { name: 'Taro Milk Tea', desc: '', price: 80 },
+        { name: 'Hokkaido Milk Tea', desc: '', price: 80 },
+        { name: 'Brown Sugar Milk Tea', desc: 'with brown sugar coating & pearls', price: 80 },
+        { name: 'Thai Milk Tea', desc: 'milk tea with Thai tea', price: 80 },
+      ],
+      milkshake: [
+        { name: 'Cookies and Cream Milkshake', price: 65 },
+        { name: 'Caramel Macchiato Milkshake', price: 65 },
+        { name: 'Avocado Milkshake', price: 65 },
+        { name: 'Ube Milkshake', price: 65 },
+        { name: 'Taro Milkshake', price: 65 },
+        { name: 'Mango Milkshake', price: 65 },
+        { name: 'Double Dutch Milkshake', price: 65 },
+      ],
+      food: [
+        { name: 'Quarter Pounder Burger + Fries', desc: 'Quarter pounder, onions, special sauce + fries', price: 100 },
+        { name: 'Burger', desc: 'Quarter pounder, onions, special sauce', price: 85 },
+        { name: 'Fries', desc: 'Choice: Cheese / BBQ / Sour & Cream', price: 75 },
+        { name: 'Burger + Milkshake', desc: 'Burger + any milkshake flavor', price: 130 },
+        { name: 'Fries + Milkshake', desc: 'Fries + any milkshake flavor', price: 110 },
+      ],
+      dessert: [
+        { name: 'Cookies', price: 55 },
+        { name: 'Brownies', price: 70 },
+        { name: 'Red Velvet Cookies', price: 60 },
+      ],
+      addons: [
+        { name: 'Sub-Oat Milk (100mL)', price: 35 },
+        { name: 'Extra Espresso Shot', price: 30 },
+        { name: 'Vanilla Syrup (20mL)', price: 25 },
+      ]
+    };
+
+    // === CONFIG ===
+    const FACEBOOK_PAGE_URL = 'https://www.facebook.com/share/1FLgJVvTcc/';
+
+    // === STATE ===
+    let cart = [];
+    let orderType = null;
+    let claimedNumbers = [];
+    let currentOrderText = '';
+
+    // === ELEMENTS ===
+    const copyBuffer = document.getElementById('copyBuffer');
+    const menuContent = document.getElementById('menuContent');
+    const cartOverlay = document.getElementById('cartOverlay');
+    const cartItemsEl = document.getElementById('cartItems');
+    const cartTotalEl = document.getElementById('cartTotal');
+    const cartCountEl = document.getElementById('cartCount');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const orderFormEl = document.getElementById('orderForm');
+    const formFieldsEl = document.getElementById('formFields');
+    const formTitleEl = document.getElementById('formTitle');
+    const formErrorEl = document.getElementById('formError');
+    const successOverlay = document.getElementById('successOverlay');
+    const closeSuccessBtn = document.getElementById('closeSuccess');
+    const manualCopyBtn = document.getElementById('manualCopyBtn');
+    const orderPreview = document.getElementById('orderPreview');
+    const copyIcon = document.getElementById('copyIcon');
+    const copyTitle = document.getElementById('copyTitle');
+    const copyMessage = document.getElementById('copyMessage');
+
+    // === RELIABLE COPY FUNCTION ===
+    async function copyToClipboard(text) {
+      // Method 1: Modern Clipboard API
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (e) {
+        console.log('Clipboard API failed, trying fallback...');
+      }
+
+      // Method 2: Fallback textarea method (works everywhere)
+      try {
+        copyBuffer.value = text;
+        copyBuffer.select();
+        copyBuffer.setSelectionRange(0, 99999);
+        const success = document.execCommand('copy');
+        copyBuffer.value = '';
+        return success;
+      } catch (e) {
+        console.log('All copy methods failed');
+        return false;
+      }
+    }
+
+    // === RENDER MENU ===
+    function renderMenu(tab = 'coffee') {
+      menuContent.innerHTML = '';
+      const items = menu[tab];
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-xl shadow-sm p-4 menu-card transition';
+        
+        if (item.sizes) {
+          card.innerHTML = `
+            <h4 class="font-semibold text-lg">${item.name}</h4>
+            <p class="text-sm text-gray-500 mb-3">${item.desc || ''}</p>
+            <div class="flex flex-wrap gap-2">
+              ${item.sizes.map(s => `
+                <button class="add-item-btn bg-primary/5 hover:bg-primary/15 text-primary px-3 py-2 rounded-lg text-sm transition"
+                  data-name="${item.name}" data-size="${s.label}" data-price="${s.price}">
+                  ${s.label} — ₱${s.price}
+                </button>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <h4 class="font-semibold text-lg">${item.name}</h4>
+            <p class="text-sm text-gray-500 mb-3">${item.desc || ''}</p>
+            <button class="add-item-btn bg-primary/5 hover:bg-primary/15 text-primary px-3 py-2 rounded-lg text-sm transition w-full"
+              data-name="${item.name}" data-size="" data-price="${item.price}">
+              Add — ₱${item.price}
+            </button>
+          `;
+        }
+        menuContent.appendChild(card);
+      });
+
+      document.querySelectorAll('.add-item-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          addToCart({
+            name: btn.dataset.name,
+            size: btn.dataset.size,
+            price: parseFloat(btn.dataset.price)
+          });
+        });
+      });
+    }
+
+    // === CART FUNCTIONS ===
+    function addToCart(item) {
+      const key = `${item.name}||${item.size}`;
+      const existing = cart.find(c => `${c.name}||${c.size}` === key);
+      if (existing) existing.qty++;
+      else cart.push({ ...item, qty: 1 });
+      updateCart();
+      cartOverlay.classList.remove('hidden');
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      updateCart();
+    }
+
+    function changeQty(index, delta) {
+      cart[index].qty += delta;
+      if (cart[index].qty <= 0) cart.splice(index, 1);
+      updateCart();
+    }
+
+    function updateCart() {
+      const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+      const totalPrice = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+      
+      cartCountEl.textContent = totalQty;
+      cartTotalEl.textContent = `₱${totalPrice.toFixed(2)}`;
+      checkoutBtn.disabled = totalQty === 0;
+
+      if (cart.length === 0) {
+        cartItemsEl.innerHTML = '<p class="text-gray-400 text-center">Your cart is empty</p>';
+      } else {
+        cartItemsEl.innerHTML = cart.map((item, idx) => `
+          <div class="flex justify-between items-center py-3 border-b">
+            <div>
+              <p class="font-medium">${item.name}${item.size ? ` (${item.size})` : ''}</p>
+              <p class="text-sm text-gray-500">₱${item.price} each</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="qty-btn px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" data-idx="${idx}" data-dir="-1">−</button>
+              <span>${item.qty}</span>
+              <button class="qty-btn px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" data-idx="${idx}" data-dir="+1">+</button>
+              <button class="del-btn text-red-400 hover:text-red-600 ml-2" data-idx="${idx}">🗑️</button>
+            </div>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('.qty-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx);
+            changeQty(idx, parseInt(btn.dataset.dir));
+          });
+        });
+        document.querySelectorAll('.del-btn').forEach(btn => {
+          btn.addEventListener('click', () => removeFromCart(parseInt(btn.dataset.idx)));
+        });
+      }
+    }
+
+    // === ORDER TYPE & FORM ===
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        orderType = btn.dataset.type;
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('border-primary', 'bg-primary/5'));
+        btn.classList.add('border-primary', 'bg-primary/5');
+        orderFormEl.classList.remove('hidden');
+        formErrorEl.classList.add('hidden');
+        buildForm();
+      });
+    });
+
+    function buildForm() {
+      formErrorEl.classList.add('hidden');
+      let html = '';
+      
+      switch(orderType) {
+        case 'dinein':
+          formTitleEl.textContent = '🍽️ Dine-In — Table Details';
+          html = `
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Your Name *</label>
+              <input type="text" id="customerName" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Enter your full name" required>
+            </div>
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Table Number *</label>
+              <input type="text" id="tableNumber" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="e.g. 5 or A3" required>
+            </div>
+          `;
+          break;
+        case 'takeout':
+          formTitleEl.textContent = '🥡 Take-Out — Claim Details';
+          html = `
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Your Name *</label>
+              <input type="text" id="customerName" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Enter your full name" required>
+            </div>
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Preferred Claim Number *</label>
+              <input type="text" id="claimNumber" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Choose a number e.g. 101" required>
+              <p class="text-xs text-gray-500 mt-1">This will be used to call your order when ready</p>
+              <p id="claimNotice" class="text-sm mt-1 hidden"></p>
+            </div>
+          `;
+          break;
+        case 'delivery':
+          formTitleEl.textContent = '🚚 Delivery — Shipping Details';
+          html = `
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Full Name *</label>
+              <input type="text" id="deliveryName" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Receiver's full name" required>
+            </div>
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Complete Delivery Address *</label>
+              <textarea id="deliveryAddress" rows="3" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="House No., Street, Barangay, Town/City, Province" required></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="block text-sm font-medium mb-1">Contact Number *</label>
+              <input type="tel" id="deliveryPhone" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="09XX-XXX-XXXX" required>
+            </div>
+          `;
+          break;
+      }
+      formFieldsEl.innerHTML = html;
+      
+      if (orderType === 'takeout') {
+        const input = document.getElementById('claimNumber');
+        const notice = document.getElementById('claimNotice');
+        input.addEventListener('input', () => {
+          const val = input.value.trim();
+          if (val && claimedNumbers.includes(val)) {
+            notice.textContent = `⚠️ Claim number "${val}" is already taken. Please choose another.`;
+            notice.className = 'text-sm mt-1 text-red-500';
+          } else if (val) {
+            notice.textContent = `✅ Claim number "${val}" is available.`;
+            notice.className = 'text-sm mt-1 text-green-600';
+          }
+          if (val) notice.classList.remove('hidden');
+          else notice.classList.add('hidden');
+        });
+      }
+    }
+
+    // === TAB SWITCHING ===
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('tab-active');
+          b.classList.add('text-gray-500');
+        });
+        btn.classList.add('tab-active');
+        btn.classList.remove('text-gray-500');
+        renderMenu(btn.dataset.tab);
+      });
+    });
+
+    // === CART TOGGLE ===
+    document.getElementById('cartToggle').addEventListener('click', () => cartOverlay.classList.remove('hidden'));
+    document.getElementById('closeCart').addEventListener('click', () => cartOverlay.classList.add('hidden'));
+    cartOverlay.addEventListener('click', e => { if (e.target === cartOverlay) cartOverlay.classList.add('hidden'); });
+
+    // === SUCCESS MODAL CLOSE ===
+    closeSuccessBtn.addEventListener('click', () => {
+      successOverlay.classList.add('hidden');
+      cart = [];
+      updateCart();
+      orderFormEl.classList.add('hidden');
+      orderType = null;
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('border-primary', 'bg-primary/5'));
+    });
+
+    // === MANUAL COPY BUTTON ===
+    manualCopyBtn.addEventListener('click', async () => {
+      const success = await copyToClipboard(currentOrderText);
+      if (success) {
+        manualCopyBtn.textContent = '✅ Copied!';
+        manualCopyBtn.classList.remove('bg-gold', 'hover:bg-amber-600');
+        manualCopyBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+        setTimeout(() => {
+          manualCopyBtn.textContent = '📋 Click to Copy Order';
+          manualCopyBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+          manualCopyBtn.classList.add('bg-gold', 'hover:bg-amber-600');
+        }, 2000);
+      }
+    });
+
+    // === CHECKOUT — RELIABLE COPY ===
+    checkoutBtn.addEventListener('click', async () => {
+      if (!orderType) {
+        formErrorEl.textContent = 'Please select an order type first (Dine-In / Take-Out / Delivery)';
+        formErrorEl.classList.remove('hidden');
+        return;
+      }
+
+      let details = {};
+      let valid = true;
+      formErrorEl.classList.add('hidden');
+
+      if (orderType === 'dinein') {
+        details.name = document.getElementById('customerName')?.value.trim();
+        details.table = document.getElementById('tableNumber')?.value.trim();
+        if (!details.name || !details.table) { valid = false; formErrorEl.textContent = 'Please fill in Name and Table Number'; }
+      } else if (orderType === 'takeout') {
+        details.name = document.getElementById('customerName')?.value.trim();
+        details.claimNo = document.getElementById('claimNumber')?.value.trim();
+        if (!details.name) { valid = false; formErrorEl.textContent = 'Please enter your name'; }
+        else if (!details.claimNo) { valid = false; formErrorEl.textContent = 'Please enter your preferred claim number'; }
+        else if (claimedNumbers.includes(details.claimNo)) { valid = false; formErrorEl.textContent = 'That claim number is taken. Please choose another.'; }
+        else { claimedNumbers.push(details.claimNo); }
+      } else if (orderType === 'delivery') {
+        details.name = document.getElementById('deliveryName')?.value.trim();
+        details.address = document.getElementById('deliveryAddress')?.value.trim();
+        details.phone = document.getElementById('deliveryPhone')?.value.trim();
+        if (!details.name || !details.address || !details.phone) {
+          valid = false; formErrorEl.textContent = 'Please fill in all delivery fields';
+        }
+      }
+
+      if (!valid) {
+        formErrorEl.classList.remove('hidden');
+        return;
+      }
+
+      // Build order message
+      let message = `🛒 NEW ORDER — ${orderType.toUpperCase()}\n`;
+      message += '━━━━━━━━━━━━━━━━━━━━\n';
+      
+      if (orderType === 'dinein') {
+        message += `👤 Name: ${details.name}\n🪑 Table: ${details.table}\n`;
+      } else if (orderType === 'takeout') {
+        message += `👤 Name: ${details.name}\n🏷️ Claim No: ${details.claimNo}\n`;
+      } else if (orderType === 'delivery') {
+        message += `👤 Name: ${details.name}\n📍 Address: ${details.address}\n📞 Phone: ${details.phone}\n`;
+      }
+      
+      message += '\n📋 Items Ordered:\n';
+      cart.forEach(item => {
+        message += `• ${item.qty}x ${item.name}${item.size ? ` (${item.size})` : ''} — ₱${(item.price * item.qty).toFixed(2)}\n`;
+      });
+      
+      const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+      message += `\n💰 TOTAL: ₱${total.toFixed(2)}\n`;
+      message += '\n———\nPlease confirm my order. Thank you! ☕';
+
+      // Store for manual copy fallback
+      currentOrderText = message;
+
+      // Reset modal state
+      copyIcon.textContent = '📋';
+      copyTitle.textContent = 'Copying Order...';
+      copyMessage.textContent = 'Your order details are being prepared.';
+      orderPreview.textContent = message;
+      orderPreview.classList.remove('hidden');
+      manualCopyBtn.classList.add('hidden');
+
+      // ✅ AUTO-COPY with dual fallback methods
+      const copied = await copyToClipboard(message);
+
+      if (copied) {
+        copyIcon.textContent = '✅';
+        copyTitle.textContent = 'Copied to Clipboard!';
+        copyMessage.textContent = 'Your order is ready — paste it in Messenger.';
+      } else {
+        copyIcon.textContent = '⚠️';
+        copyTitle.textContent = 'Please Copy Manually';
+        copyMessage.textContent = 'Your browser blocked auto-copy — use the button below.';
+        manualCopyBtn.classList.remove('hidden');
+      }
+
+      // Open Facebook Page
+      window.open(FACEBOOK_PAGE_URL, '_blank');
+      cartOverlay.classList.add('hidden');
+      successOverlay.classList.remove('hidden');
+    });
+
+    // === INITIALIZE ===
+    renderMenu('coffee');
+  </script>
+</body>
+</html>
